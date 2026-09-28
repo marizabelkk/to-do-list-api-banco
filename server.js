@@ -124,6 +124,43 @@ app.delete('/tarefas/:id', async (req, res) => {
 });
 
 // ===============================================
+// ROTA 4: PUT /tarefas/:id
+// ALTERAR CONCLUSÃO DA TAREFA
+// ===============================================
+
+app.put('/tarefas/:id', async (req, res) => {
+    const { id } = req.params;
+    const { concluida } = req.body;
+
+    try {
+        const [resultado] = await pool.query(
+            'UPDATE tarefas SET concluida = ? WHERE id = ?',
+            [concluida, id]
+        );
+
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({
+                erro: 'Tarefa não encontrada.'
+            });
+        }
+
+        const [tarefas] = await pool.query(
+            'SELECT * FROM tarefas WHERE id = ?',
+            [id]
+        );
+
+        return res.json(tarefas[0]);
+
+    } catch (erro) {
+        console.error('Erro ao atualizar tarefa:', erro.message);
+
+        return res.status(500).json({
+            erro: 'Erro ao atualizar tarefa no banco de dados.'
+        });
+    }
+});
+
+// ===============================================
 // ROTA DE TESTE
 // ===============================================
 
@@ -139,3 +176,4 @@ app.listen(PORT, () => {
     console.log(`Servidor rodando na porta ${PORT}`);
     console.log('Pronto para atender requisições do seu Front-End React.');
 });
+
