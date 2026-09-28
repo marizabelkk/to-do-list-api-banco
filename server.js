@@ -27,51 +27,42 @@ pool.query('SELECT 1')
         console.error('Erro ao conectar ao banco de dados:', erro.message);
     });
 
-// Middleware CORS
-app.use(cors());
+// ===============================================
+// MIDDLEWARES
+// ===============================================
 
-// Middleware para processar JSON nas requisições
+app.use(cors());
 app.use(express.json());
 
 // ===============================================
-// DADOS MOCKADOS
-// TEMPORARIAMENTE MANTIDOS
+// ROTA 1: GET /tarefas
+// BUSCAR TODAS AS TAREFAS
 // ===============================================
 
-let mockTarefas = [
-    {
-        id: 1361434473096,
-        texto: 'Configurar a API Node.js com Express',
-        concluida: true
-    },
-    {
-        id: 1461434473096,
-        texto: 'Testar a busca de dados no componente App.jsx',
-        concluida: false
-    },
-    {
-        id: 1561434473096,
-        texto: 'Começar a estilização dos componentes com Bootstrap',
-        concluida: false
-    },
-];
-
-// ===============================================
-// ROTA 1: GET /tarefas (BUSCAR TODAS)
-// ===============================================
-
-app.get('/tarefas', (req, res) => {
+app.get('/tarefas', async (req, res) => {
     console.log('Requisição GET recebida em /tarefas');
 
-    // Temporariamente retorna o array mockado
-    return res.json(mockTarefas);
+    try {
+        const [tarefas] = await pool.query(
+            'SELECT * FROM tarefas'
+        );
+
+        return res.json(tarefas);
+    } catch (erro) {
+        console.error('Erro ao buscar tarefas:', erro.message);
+
+        return res.status(500).json({
+            erro: 'Erro ao buscar tarefas no banco de dados.'
+        });
+    }
 });
 
 // ===============================================
-// ROTA 2: POST /tarefas (CRIAR NOVA TAREFA)
+// ROTA 2: POST /tarefas
+// CRIAR UMA NOVA TAREFA
 // ===============================================
 
-app.post('/tarefas', (req, res) => {
+app.post('/tarefas', async (req, res) => {
     const { texto } = req.body;
 
     if (!texto) {
@@ -80,38 +71,56 @@ app.post('/tarefas', (req, res) => {
         });
     }
 
-    const novaTarefa = {
-        id: Date.now(),
-        texto,
-        concluida: false
-    };
+    try {
+        const [resultado] = await pool.query(
+            'INSERT INTO tarefas (texto, concluida) VALUES (?, ?)',
+            [texto, false]
+        );
 
-    // Temporariamente adiciona ao array
-    mockTarefas.push(novaTarefa);
+        const novaTarefa = {
+            id: resultado.insertId,
+            texto: texto,
+            concluida: false
+        };
 
-    return res.status(201).json(novaTarefa);
+        return res.status(201).json(novaTarefa);
+    } catch (erro) {
+        console.error('Erro ao criar tarefa:', erro.message);
+
+        return res.status(500).json({
+            erro: 'Erro ao criar tarefa no banco de dados.'
+        });
+    }
 });
 
 // ===============================================
 // ROTA 3: DELETE /tarefas/:id
+// EXCLUIR UMA TAREFA
 // ===============================================
 
-app.delete('/tarefas/:id', (req, res) => {
+app.delete('/tarefas/:id', async (req, res) => {
     const { id } = req.params;
 
-    const tamanhoOriginal = mockTarefas.length;
+    try {
+        const [resultado] = await pool.query(
+            'DELETE FROM tarefas WHERE id = ?',
+            [id]
+        );
 
-    mockTarefas = mockTarefas.filter(
-        t => t.id.toString() !== id.toString()
-    );
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({
+                erro: 'Tarefa não encontrada.'
+            });
+        }
 
-    if (mockTarefas.length === tamanhoOriginal) {
-        return res.status(404).json({
-            erro: 'Tarefa não encontrada.'
+        return res.status(204).send();
+    } catch (erro) {
+        console.error('Erro ao excluir tarefa:', erro.message);
+
+        return res.status(500).json({
+            erro: 'Erro ao excluir tarefa do banco de dados.'
         });
     }
-
-    return res.status(204).send();
 });
 
 // ===============================================
