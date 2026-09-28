@@ -14,6 +14,7 @@ const pool = mysql.createPool({
     user: 'root',
     password: 'root',
     database: 'todo_list',
+    charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 10
 });
